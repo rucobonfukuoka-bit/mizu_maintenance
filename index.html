@@ -1,0 +1,1011 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light only">
+<title>水やり管理</title>
+<style>
+  :root{
+    --p:#F1EEE3;
+    --pr:#FAF8F1;
+    --i:#2C2B24;
+    --is:#4A4740;
+    --l:#4B7A4E;
+    --ls:#E4EDDE;
+    --w:#3D74A6;
+    --ws:#E1EBF3;
+    --d:#8B5E34;
+    --ds:#F0E6DA;
+    --a:#B5482B;
+    --as:#F6E2DA;
+    --ln:#D8D2C0;
+  }
+  *{box-sizing:border-box;}
+  html{color-scheme:light;background:#F1EEE3;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--p);
+    color:var(--i);
+    font-family:"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+  }
+  #app{max-width:640px;margin:0 auto;padding:16px 14px 80px;}
+
+  header.top{
+    margin-bottom:14px;
+  }
+  .tag{
+    display:inline-block;
+    font-weight:700;
+    font-size:20px;
+    letter-spacing:0.02em;
+    padding:4px 12px;
+    background:var(--i);
+    color:var(--p);
+    border-radius:3px;
+    transform:rotate(-0.6deg);
+  }
+  .subline{
+    margin-top:8px;
+    font-size:13px;
+    color:var(--is);
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:8px;
+  }
+
+  .staffbar{
+    display:flex;
+    gap:8px;
+    align-items:center;
+    margin:12px 0 4px;
+  }
+  select, input[type=text], textarea{
+    font-family:inherit;
+    font-size:15px;
+    border:1px solid var(--ln);
+    background:var(--pr);
+    color:var(--i);
+    border-radius:8px;
+    padding:8px 10px;
+  }
+  .staffbar select{flex:1;}
+
+  nav.tabs{
+    display:flex;
+    gap:6px;
+    margin:16px 0 14px;
+    border-bottom:1px solid var(--ln);
+  }
+  nav.tabs button{
+    flex:1;
+    background:none;
+    border:none;
+    font-family:inherit;
+    font-size:11.5px;
+    color:var(--is);
+    padding:10px 2px;
+    cursor:pointer;
+    border-bottom:2px solid transparent;
+    font-weight:600;
+    white-space:nowrap;
+  }
+  nav.tabs button.ac{
+    color:var(--i);
+    border-bottom:2px solid var(--l);
+  }
+
+  .slotbar{
+    display:flex;
+    gap:8px;
+    margin-bottom:14px;
+  }
+  .sb{
+    flex:1;
+    padding:10px;
+    border-radius:8px;
+    border:1px solid var(--ln);
+    background:var(--pr);
+    font-family:inherit;
+    font-weight:700;
+    font-size:14px;
+    cursor:pointer;
+    color:var(--is);
+  }
+  .sb.ac.am{background:var(--ws);border-color:var(--w);color:var(--w);}
+  .sb.ac.pm{background:var(--ds);border-color:var(--d);color:var(--d);}
+
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:8px;
+  }
+  .cell{
+    border:none;
+    border-radius:10px;
+    padding:10px 6px;
+    text-align:center;
+    cursor:pointer;
+    min-height:74px;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+    gap:4px;
+    color:#fff;
+  }
+  .cell .name{font-size:12px;font-weight:700;line-height:1.3;color:#fff;}
+  .cell .status{font-size:11px;color:rgba(255,255,255,0.92);font-weight:600;}
+  .cell.done{outline:3px solid #fff;outline-offset:-4px;}
+  .cell.done .status{color:#fff;font-weight:800;}
+  .cell.skip{outline:3px dashed #2C2B24;outline-offset:-4px;}
+  .cell.skip .name, .cell.skip .status{color:#2C2B24;}
+  .cell.ef{box-shadow:inset 0 0 0 3px var(--a);}
+  .cell .eb{font-size:10px;color:#fff;font-weight:700;background:rgba(0,0,0,0.35);border-radius:6px;padding:1px 5px;cursor:pointer;}
+  .cell .btn.gh{background:#fff;color:var(--i);border:none;font-weight:700;}
+
+  .grid.gx{grid-template-columns:repeat(3,1fr);gap:10px;}
+  .grid.gx .cell{min-height:96px;padding:14px 8px;}
+  .grid.gx .name{font-size:15px;}
+  .grid.gx .status{font-size:13px;}
+  .grid.gx .btn.gh{font-size:12px !important;padding:6px 10px !important;}
+  .hint{font-size:12px;color:var(--is);margin:10px 2px 0;line-height:1.6;}
+
+  textarea.instr{
+    width:100%;
+    min-height:90px;
+    resize:vertical;
+    margin-top:8px;
+  }
+  .btn{
+    font-family:inherit;
+    font-size:14px;
+    font-weight:700;
+    border:none;
+    border-radius:8px;
+    padding:10px 16px;
+    cursor:pointer;
+    background:var(--i);
+    color:var(--p);
+  }
+  .btn.gh{background:var(--pr);color:var(--i);border:1px solid var(--ln);}
+  .row{display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap;}
+
+  .il{margin-top:14px;display:flex;flex-direction:column;gap:6px;}
+  .item{
+    display:flex;
+    align-items:flex-start;
+    gap:8px;
+    background:var(--pr);
+    border:1px solid var(--ln);
+    border-radius:8px;
+    padding:9px 10px;
+  }
+  .item.done{background:var(--ls);border-color:var(--l);}
+  .item input[type=checkbox]{margin-top:2px;width:16px;height:16px;flex-shrink:0;}
+  .item .txt{font-size:14px;line-height:1.5;flex:1;}
+  .item.done .txt{text-decoration:line-through;color:var(--is);}
+  .item .db{font-size:11px;color:var(--is);margin-top:2px;}
+
+  .st{
+    font-size:13px;
+    font-weight:700;
+    color:var(--is);
+    margin:18px 0 8px;
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+  .st::after{content:"";flex:1;height:1px;background:var(--ln);}
+
+  .ar{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    background:var(--pr);
+    border:1px solid var(--ln);
+    border-radius:8px;
+    padding:8px 10px;
+    margin-bottom:6px;
+    font-size:13px;
+  }
+  .ar .an{width:76px;flex-shrink:0;font-weight:600;}
+  .pill{
+    font-size:11px;
+    padding:3px 8px;
+    border-radius:20px;
+    font-weight:700;
+  }
+  .pill.ok{background:var(--ls);color:var(--l);}
+  .pill.skip{background:#EFEBE2;color:var(--is);}
+  .pill.no{background:var(--as);color:var(--a);}
+  .pill.extra{background:var(--as);color:var(--a);}
+
+  .ea input{width:100%;margin-bottom:6px;}
+  .sm{font-size:11px;color:var(--is);}
+
+  #report{background:var(--pr);border:1px solid var(--ln);border-radius:10px;padding:16px;}
+  #report h2{font-size:16px;margin:0 0 2px;}
+  #report .rd{font-size:12px;color:var(--is);margin-bottom:14px;}
+  #report table{width:100%;border-collapse:collapse;font-size:12px;}
+  #report th,#report td{border:1px solid var(--ln);padding:5px 4px;text-align:center;}
+  #report th{background:var(--p);font-weight:700;}
+  #report .ri{margin-top:16px;font-size:13px;white-space:pre-wrap;line-height:1.6;}
+  .rt{font-size:13px;padding:4px 0;border-bottom:1px dashed var(--ln);}
+
+  .po{display:none;}
+  .pob{display:none;}
+  input[type=time].te{font-size:11px;padding:2px 4px;border:1px solid var(--ln);border-radius:4px;background:var(--pr);color:var(--i);width:auto;}
+
+  .hw{overflow-x:auto;margin-top:10px;-webkit-overflow-scrolling:touch;}
+  .hw table{border-collapse:collapse;font-size:11px;}
+  .hw td, .hw th{border:1px solid var(--ln);padding:5px 8px;text-align:center;white-space:nowrap;}
+  .hw th.wh{position:sticky;left:0;background:var(--pr);text-align:left;font-weight:700;z-index:1;}
+
+  @media print{
+    nav.tabs, .staffbar, .np{display:none !important;}
+    body{background:#fff;}
+    #app{max-width:none;padding:0;}
+    #report{border:none;padding:0;}
+    .po{display:inline;}
+    .pob{display:block;}
+  }
+
+  .loading{padding:40px 0;text-align:center;color:var(--is);font-size:13px;}
+
+  .pg{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;}
+  .pt{position:relative;width:84px;height:84px;border-radius:8px;overflow:hidden;border:1px solid var(--ln);}
+  .pt img{width:100%;height:100%;object-fit:cover;display:block;cursor:pointer;}
+  .pt .del{position:absolute;top:2px;right:2px;background:rgba(44,43,36,0.75);color:#fff;border:none;border-radius:50%;width:20px;height:20px;font-size:12px;line-height:1;cursor:pointer;}
+  .ap{width:84px;height:84px;border-radius:8px;border:1px dashed var(--ln);background:var(--pr);display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--is);cursor:pointer;text-align:center;padding:4px;}
+  .ap input{display:none;}
+  .mo{position:fixed;inset:0;background:rgba(20,19,15,0.55);display:flex;align-items:center;justify-content:center;z-index:80;padding:20px;}
+  .mb{background:var(--pr);border-radius:12px;padding:18px;max-width:320px;width:100%;box-shadow:0 8px 24px rgba(0,0,0,0.25);}
+  .mb p{margin:0 0 14px;font-size:14px;line-height:1.6;}
+  .mb input[type=text]{width:100%;margin-bottom:14px;}
+  .ma{display:flex;gap:8px;justify-content:flex-end;}
+  .ts{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:var(--a);color:#fff;padding:10px 16px;border-radius:8px;font-size:13px;z-index:90;box-shadow:0 4px 12px rgba(0,0,0,0.2);}
+  .lb{position:fixed;inset:0;background:rgba(20,19,15,0.9);display:flex;align-items:center;justify-content:center;z-index:50;padding:20px;}
+  .lb img{max-width:100%;max-height:100%;border-radius:6px;}
+  @media print{ .pt .del, .ap{display:none !important;} .pt{width:120px;height:120px;} }
+</style>
+</head>
+<body>
+<div id="app"><div class="loading">読み込み中…</div></div>
+
+<script>
+// ==== データAPI連携: window.storage をApps Script製JSON API経由に差し替え ====
+// このURLは、Apps Scriptエディタの「デプロイを管理」に表示される
+// ウェブアプリのURL(.../exec)をそのまま入れてください。
+const API_URL = 'https://script.google.com/macros/s/AKfycbwPJVUETIr-i5766asjRKvkUB61-CurW7xIE3bQQ6_RafVgbtUaCHhmEybMdbLnsbYN/exec';
+
+const RPC_TIMEOUT_MS = 15000; // 15秒応答がなければタイムアウトさせる
+
+function withTimeout_(promise, label){
+  return new Promise((resolve, reject)=>{
+    let settled = false;
+    const timer = setTimeout(()=>{
+      if(settled) return;
+      settled = true;
+      reject(new Error('TIMEOUT: ' + label + ' がサーバーから' + (RPC_TIMEOUT_MS/1000) + '秒応答しませんでした'));
+    }, RPC_TIMEOUT_MS);
+    promise.then((v)=>{
+      if(settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve(v);
+    }).catch((err)=>{
+      if(settled) return;
+      settled = true;
+      clearTimeout(timer);
+      reject(err);
+    });
+  });
+}
+
+async function apiGet_(key){
+  const url = API_URL + '?action=get&key=' + encodeURIComponent(key);
+  const res = await fetch(url);
+  const data = await res.json();
+  if(!data.ok) throw new Error(data.error || 'API error (get)');
+  return data.value;
+}
+
+async function apiPost_(body){
+  // Content-Type を text/plain にすることで、Apps Script側で対応していない
+  // プリフライト(OPTIONS)リクエストの発生を避けている
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(body)
+  });
+  const data = await res.json();
+  if(!data.ok) throw new Error(data.error || 'API error (post)');
+  return data;
+}
+
+window.storage = {
+  get: async (key)=>{
+    const value = await withTimeout_(apiGet_(key), 'getValue');
+    return (value !== null && value !== undefined && value !== '') ? {key, value} : null;
+  },
+  set: async (key, value)=>{
+    await withTimeout_(apiPost_({ action:'set', key, value }), 'setValue');
+    return {key, value};
+  }
+};
+
+// 一定時間たっても最初の読み込みが終わらない場合、フリーズ画面のまま放置せず
+// エラー表示+再読み込みボタンを出す(通信が完全にハングするケースの保険)
+setTimeout(()=>{
+  if(!state || !state.loaded){
+    const app = document.getElementById('app');
+    if(app){
+      app.innerHTML = `<div class="loading" style="color:#B5482B;font-weight:700;">読み込みに時間がかかっています<br><button class="btn" style="margin-top:14px;" onclick="location.reload()">再読み込み</button></div>`;
+    }
+  }
+}, 20000);
+// ==== ここまで ====
+
+const todayStr = () => {
+  const d = new Date();
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+};
+const dateLabel = (dateStr) => {
+  const [y,m,d] = dateStr.split("-").map(Number);
+  const dt = new Date(y, m-1, d);
+  const w = ["日","月","火","水","木","金","土"][dt.getDay()];
+  const suffix = dateStr===todayStr() ? "・今日" : "";
+  return m+"月"+d+"日("+w+")"+suffix;
+};
+const shiftDate = (dateStr, delta) => {
+  const [y,m,d] = dateStr.split("-").map(Number);
+  const dt = new Date(y, m-1, d);
+  dt.setDate(dt.getDate()+delta);
+  return dt.getFullYear()+"-"+String(dt.getMonth()+1).padStart(2,"0")+"-"+String(dt.getDate()).padStart(2,"0");
+};
+// [エリア名, グループ番号] のペアで一元管理。名前とグループ番号を別々の配列/オブジェクトに
+// 重複して書かない(サイズ削減と保守性のため)。groupColorは位置ではなく名前で紐づくので、
+// 新しいエリアを追加しても既存エリアのインデックス(過去データとの対応)はズレない。
+const AREA_DEFS = [
+  ["マット",0],["A4",0],["トイレ前",0],["植え込み台",0],["A1観葉植物",0],["A3観葉植物",0],["鉢花",0],["レジ前コーナー",0],["A棟ジョウロ灌水箇所",0],
+  ["表A",1],["表B",1],["表C",1],["ひまわり自動灌水",1],["寄植え",1],["大鉢",1],
+  ["B1",2],["集荷場",2],["B3・4",2],["B中1",2],["B中2",2],["B中3",2],
+  ["植木コーナー",3],
+  ["オニパーク",4],
+  ["BC間",5],
+  ["C3",6],["C4",6],
+  ["ハイゴケ",7],
+  ["南",8],
+  ["ガーデン",9],["自動灌水",9],["入口アーチ",9],["ハンギング",9],["たいまつ",9],["ガーデンバラ",9]
+];
+const DEFAULT_AREAS = AREA_DEFS.map(d=>d[0]);
+const GROUP_COLORS = ["#5C4A3A","#B5652A","#2F6E6B","#55642F","#63395A","#3D5875","#8C6A1F","#34573F","#8B4A30","#8A3F55"];
+const AREA_GROUP_BY_NAME = {};
+AREA_DEFS.forEach(d=>{ AREA_GROUP_BY_NAME[d[0]] = d[1]; });
+function groupColor(idx){
+  const g = AREA_GROUP_BY_NAME[state.areas[idx]];
+  return (g!==undefined ? GROUP_COLORS[g] : null) || "#999";
+}
+// 保存済みのエリア一覧に、新しく追加されたデフォルトエリアが無ければ末尾に追加する。
+// 既存エリアの並び順・インデックスは変えないので、過去の記録とのズレは起きない。
+function mergeNewDefaultAreas(){
+  let changed = false;
+  DEFAULT_AREAS.forEach((name)=>{
+    if(state.areas.indexOf(name) === -1){
+      state.areas.push(name);
+      changed = true;
+    }
+  });
+  return changed;
+}
+const DEFAULT_STAFF = ["店長","商品管理班","真鍋","富山","中村","上野","吉岡","下地","大石"];
+
+let state = {
+  areas: DEFAULT_AREAS,
+  staffList: DEFAULT_STAFF,
+  currentStaff: "",
+  tab: "check",     // check | instr | worklog | admin | report
+  slot: "am",       // am | pm
+  viewDate: todayStr(),
+  dayLoading: false,
+  checks: {},        // {areaIdx: {am:{staff,time,skip}, pm:{staff,time,skip}, extra:[{staff,time}]}}
+  instructions: { text:"", images:[], eventName:"" },
+  workItems: [], // {text, done, doneBy, doneAt, doneDate} 日をまたいで持ち越す作業リスト
+  weather: null,
+  textScale: 1,
+  worklog: [], // {staff, time, text}
+  editingAreas: false,
+  adminSort: 'area', // area | staff
+  loaded: false,
+  loadError: false // データ取得に失敗したものがあれば true(通信エラーの目印)
+};
+
+async function safeGet(key, shared){
+  try{
+    const r = await window.storage.get(key, shared);
+    return r ? r.value : null;
+  }catch(e){
+    console.error('読み込み失敗:', key, e);
+    state.loadError = true;
+    return null;
+  }
+}
+async function safeSet(key, value, shared){
+  for(let attempt=1; attempt<=2; attempt++){
+    try{
+      const r = await window.storage.set(key, value, shared);
+      if(r) return true;
+    }catch(e){
+      console.error("save failed", key, e);
+      if(attempt===2){
+        showToast("保存に失敗しました。もう一度操作してください");
+        return false;
+      }
+      await new Promise(res=>setTimeout(res, 400));
+    }
+  }
+  return false;
+}
+
+function safeParse(str, fallback){
+  if(!str) return fallback;
+  try{ return JSON.parse(str); }catch(e){ return fallback; }
+}
+
+async function loadAll(){
+  const [areas, staff, workItems] = await Promise.all([
+    safeGet("config:areas", true),
+    safeGet("config:staff", true),
+    safeGet("worklist:items", true)
+  ]);
+  state.areas = safeParse(areas, state.areas);
+  state.staffList = safeParse(staff, state.staffList);
+  state.workItems = safeParse(workItems, []);
+  if(mergeNewDefaultAreas()) await persistAreas();
+  if(state.workItems.length===0) await migrateLegacyWorkItems();
+  await loadDayData();
+}
+
+// 旧バージョンでは「チェック項目」が日ごとに保存されていた。
+// 新しい持ち越し式の作業リストが空の場合、今日の分が残っていれば一度だけ引き継ぐ。
+async function migrateLegacyWorkItems(){
+  try{
+    const raw = await safeGet("day:"+todayStr()+":instructions", true);
+    const parsed = safeParse(raw, null);
+    if(parsed && Array.isArray(parsed.items) && parsed.items.length){
+      state.workItems = parsed.items.map(it=>({
+        text: it.text || "",
+        done: !!it.done,
+        doneBy: it.doneBy || "",
+        doneAt: it.doneAt || "",
+        doneDate: it.done ? todayStr() : undefined
+      }));
+      await persistWorkItems();
+    }
+  }catch(e){ console.error("作業リストの引き継ぎに失敗", e); }
+}
+
+async function loadDayData(){
+  const [checks, instr, worklog, weather] = await Promise.all([
+    safeGet("day:"+state.viewDate+":checks", true),
+    safeGet("day:"+state.viewDate+":instructions", true),
+    safeGet("day:"+state.viewDate+":worklog", true),
+    safeGet("day:"+state.viewDate+":weather", true)
+  ]);
+  state.checks = safeParse(checks, {});
+  state.instructions = safeParse(instr, { text:"", images:[], eventName:"" });
+  if(!state.instructions.images) state.instructions.images = [];
+  if(state.instructions.eventName===undefined) state.instructions.eventName = "";
+  state.worklog = safeParse(worklog, []);
+  state.weather = safeParse(weather, null);
+  state.loaded = true;
+  render();
+  if(state.tab==="report" && state.viewDate===todayStr() && !state.weather){
+    refreshWeather();
+  }
+}
+
+async function switchDate(newDate){
+  if(!newDate || newDate === state.viewDate) return;
+  state.viewDate = newDate;
+  state.dayLoading = true;
+  render();
+  await loadDayData();
+  state.dayLoading = false;
+  render();
+}
+
+async function persistAreas(){ await safeSet("config:areas", JSON.stringify(state.areas), true); }
+async function persistStaff(){ await safeSet("config:staff", JSON.stringify(state.staffList), true); }
+async function persistChecks(){ await safeSet("day:"+state.viewDate+":checks", JSON.stringify(state.checks), true); }
+async function persistInstr(){ await safeSet("day:"+state.viewDate+":instructions", JSON.stringify(state.instructions), true); }
+async function persistWorklog(){ await safeSet("day:"+state.viewDate+":worklog", JSON.stringify(state.worklog), true); }
+async function persistWeather(){ await safeSet("day:"+state.viewDate+":weather", JSON.stringify(state.weather), true); }
+async function persistWorkItems(){ await safeSet("worklist:items", JSON.stringify(state.workItems), true); }
+
+function getCell(idx){
+  if(!state.checks[idx]) state.checks[idx] = {am:null, pm:null, extra:[]};
+  if(!state.checks[idx].extra) state.checks[idx].extra = [];
+  return state.checks[idx];
+}
+
+function nowTime(){
+  const d = new Date();
+  return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");
+}
+
+function toggleSlotCheck(idx){
+  if(!state.currentStaff){ showAlert("先に担当者を選んでください"); return; }
+  const c = getCell(idx);
+  const slot = state.slot;
+  if(c[slot] && c[slot].done){
+    c[slot] = null; // 取り消し
+  } else {
+    c[slot] = { done:true, staff: state.currentStaff, time: nowTime(), skip:false };
+  }
+  persistChecks();
+  render();
+}
+
+function toggleSkip(idx, ev){
+  ev.stopPropagation();
+  if(!state.currentStaff){ showAlert("先に担当者を選んでください"); return; }
+  const c = getCell(idx);
+  const slot = state.slot;
+  if(c[slot] && c[slot].skip){
+    c[slot] = null;
+  } else {
+    c[slot] = { done:false, skip:true, staff: state.currentStaff, time: nowTime() };
+  }
+  persistChecks();
+  render();
+}
+
+function addExtra(idx, ev){
+  ev.stopPropagation();
+  if(!state.currentStaff){ showAlert("先に担当者を選んでください"); return; }
+  showPrompt("植物名を入力(空欄でもOK):", (plant)=>{
+    const c = getCell(idx);
+    c.extra.push({ staff: state.currentStaff, time: nowTime(), plant: plant });
+    persistChecks();
+    render();
+  });
+}
+
+function removeExtra(idx, extraIdx){
+  const c = getCell(idx);
+  if(c.extra && c.extra[extraIdx] !== undefined){
+    c.extra.splice(extraIdx, 1);
+    persistChecks();
+    render();
+    const existing = document.querySelector(".mo");
+    if(existing) existing.remove();
+    showExtraList(idx);
+  }
+}
+
+// 「+追加」で記録した内容の一覧を表示し、間違えた記録をその場で削除できるようにする
+function showExtraList(idx, ev){
+  if(ev) ev.stopPropagation();
+  const c = getCell(idx);
+  const list = c.extra || [];
+  const rows = list.length ? list.map((e,i)=>` <div class="row" style="justify-content:space-between;align-items:center;border-bottom:1px solid var(--ln);padding:6px 0;margin-top:0;"> <span style="font-size:13px;">${esc(e.staff)} ${esc(e.time)}${e.plant?"・"+esc(e.plant):""}</span> <button class="btn gh" style="font-size:11px;padding:3px 8px;" onclick="removeExtra(${idx}, ${i})">削除</button> </div> `).join("") : `<div class="sm">追加の記録はありません</div>`;
+  const existing = document.querySelector(".mo");
+  if(existing) existing.remove();
+  const overlay = document.createElement("div");
+  overlay.className = "mo";
+  overlay.innerHTML = ` <div class="mb"> <p style="font-weight:700;margin-bottom:8px;">${esc(state.areas[idx])} の追加記録</p> ${rows} <div class="ma" style="margin-top:12px;"> <button class="btn" id="__extraClose">閉じる</button> </div> </div> `;
+  overlay.querySelector("#__extraClose").onclick = ()=>overlay.remove();
+  overlay.onclick = (e)=>{ if(e.target===overlay) overlay.remove(); };
+  document.body.appendChild(overlay);
+}
+
+function showAlert(message){
+  const overlay = document.createElement("div");
+  overlay.className = "mo";
+  overlay.innerHTML = ` <div class="mb"> <p>${esc(message)}</p> <div class="ma"> <button class="btn">OK</button> </div> </div> `;
+  overlay.querySelector("button").onclick = ()=>overlay.remove();
+  overlay.onclick = (e)=>{ if(e.target===overlay) overlay.remove(); };
+  document.body.appendChild(overlay);
+}
+
+function showPrompt(message, onSubmit){
+  const overlay = document.createElement("div");
+  overlay.className = "mo";
+  overlay.innerHTML = ` <div class="mb"> <p>${esc(message)}</p> <input type="text" id="__promptInput" placeholder="例: バラ、アジサイ など"> <div class="ma"> <button class="btn gh" id="__promptCancel">スキップ</button> <button class="btn" id="__promptOk">記録する</button> </div> </div> `;
+  document.body.appendChild(overlay);
+  const input = overlay.querySelector("#__promptInput");
+  setTimeout(()=>input.focus(), 30);
+  const finish = (val)=>{ overlay.remove(); onSubmit(val); };
+  overlay.querySelector("#__promptOk").onclick = ()=>finish(input.value.trim());
+  overlay.querySelector("#__promptCancel").onclick = ()=>finish("");
+  input.addEventListener("keydown", (e)=>{ if(e.key==="Enter") finish(input.value.trim()); });
+  overlay.onclick = (e)=>{ if(e.target===overlay) finish(""); };
+}
+
+function showToast(message){
+  const t = document.createElement("div");
+  t.className = "ts";
+  t.textContent = message;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(), 3200);
+}
+
+function resizeImageFile(file){
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onload = (e)=>{
+      const img = new Image();
+      img.onload = ()=>{
+        const maxDim = 900;
+        let w = img.width, h = img.height;
+        if(w > h && w > maxDim){ h = Math.round(h * maxDim / w); w = maxDim; }
+        else if(h > maxDim){ w = Math.round(w * maxDim / h); h = maxDim; }
+        const canvas = document.createElement("canvas");
+        canvas.width = w; canvas.height = h;
+        canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL("image/jpeg", 0.7));
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function handlePhotoInput(inputEl){
+  const files = Array.from(inputEl.files || []);
+  if(!files.length) return;
+  showToast("画像をアップロード中…");
+  for(const file of files){
+    try{
+      const dataUrl = await resizeImageFile(file);
+      const url = (await withTimeout_(apiPost_({ action:'uploadImage', dataUrl, filename: file.name || 'photo.jpg' }), 'uploadImage')).url;
+      state.instructions.images.push(url);
+    }catch(e){ console.error("画像の処理に失敗", e); showToast("写真のアップロードに失敗しました"); }
+  }
+  inputEl.value = "";
+  await persistInstr();
+  render();
+}
+
+function removeImage(i){
+  state.instructions.images.splice(i,1);
+  persistInstr();
+  render();
+}
+
+function openLightbox(src){
+  const box = document.createElement("div");
+  box.className = "lb";
+  box.onclick = ()=>box.remove();
+  box.innerHTML = `<img src="${src}">`;
+  document.body.appendChild(box);
+}
+
+function addWorklogEntry(){
+  if(!state.currentStaff){ showAlert("先に担当者を選んでください"); return; }
+  const textEl = document.getElementById("__worklogInput");
+  const text = textEl.value.trim();
+  if(!text) return;
+  state.worklog.push({ staff: state.currentStaff, time: nowTime(), text });
+  textEl.value = "";
+  persistWorklog();
+  render();
+}
+function removeWorklogEntry(i){
+  state.worklog.splice(i,1);
+  persistWorklog();
+  render();
+}
+
+function addInstrItem(){
+  state.workItems.push({ text:"", done:false });
+  render();
+}
+function updateInstrItemText(i, val){
+  state.workItems[i].text = val;
+}
+function commitInstrItemText(i, val){
+  state.workItems[i].text = val;
+  persistWorkItems();
+}
+function removeInstrItem(i){
+  state.workItems.splice(i,1);
+  persistWorkItems();
+  render();
+}
+function toggleInstrItem(i){
+  const it = state.workItems[i];
+  it.done = !it.done;
+  it.doneBy = it.done ? (state.currentStaff||"") : "";
+  it.doneAt = it.done ? nowTime() : "";
+  it.doneDate = it.done ? state.viewDate : undefined;
+  persistWorkItems();
+  render();
+}
+
+// 筑前町(福岡県朝倉郡)のおおよその座標
+const WEATHER_LAT = 33.4333;
+const WEATHER_LON = 130.6167;
+
+function weatherCodeToText(code){
+  const map = {
+    0:["☀️","快晴"],1:["🌤️","晴れ"],2:["⛅","晴れ時々曇り"],3:["☁️","曇り"],
+    45:["🌫️","霧"],48:["🌫️","霧"],
+    51:["🌦️","霧雨"],53:["🌦️","霧雨"],55:["🌦️","霧雨"],
+    56:["🌧️","着氷性の霧雨"],57:["🌧️","着氷性の霧雨"],
+    61:["🌧️","小雨"],63:["🌧️","雨"],65:["🌧️","大雨"],
+    66:["🌧️","着氷性の雨"],67:["🌧️","着氷性の雨"],
+    71:["❄️","小雪"],73:["❄️","雪"],75:["❄️","大雪"],77:["❄️","霧雪"],
+    80:["🌦️","にわか雨"],81:["🌦️","にわか雨"],82:["🌧️","激しいにわか雨"],
+    85:["🌨️","にわか雪"],86:["🌨️","にわか雪"],
+    95:["⛈️","雷雨"],96:["⛈️","雷雨(雹)"],99:["⛈️","雷雨(雹)"]
+  };
+  const m = map[code] || ["🌡️","-"];
+  return { icon:m[0], text:m[1] };
+}
+
+// 指定日(dateStr)の1日分(0時〜23時)をまるごと保持しておく。
+// 画面表示用(現在時刻以降)と印刷用(8-18時)は、表示時にこの1日分から絞り込む。
+function buildHourlySlice(h, dateStr){
+  if(!h || !h.time) return [];
+  const out = [];
+  for(let i=0;i<h.time.length;i++){
+    if(h.time[i].slice(0,10) !== dateStr) continue;
+    const { icon } = weatherCodeToText(h.weathercode ? h.weathercode[i] : null);
+    out.push({
+      time: h.time[i].slice(11,16),
+      icon,
+      temp: h.temperature_2m ? h.temperature_2m[i] : null,
+      pop: h.precipitation_probability ? h.precipitation_probability[i] : null,
+      humidity: h.relative_humidity_2m ? h.relative_humidity_2m[i] : null,
+      precip: h.precipitation ? h.precipitation[i] : null,
+      wind: h.wind_speed_10m ? h.wind_speed_10m[i] : null,
+      windDir: h.wind_direction_10m ? h.wind_direction_10m[i] : null
+    });
+  }
+  return out;
+}
+
+async function fetchWeatherNow(){
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${WEATHER_LAT}&longitude=${WEATHER_LON}&current=temperature_2m,weathercode&hourly=temperature_2m,weathercode,precipitation_probability,precipitation,relative_humidity_2m,wind_speed_10m,wind_direction_10m&wind_speed_unit=ms&timezone=Asia%2FTokyo&forecast_days=2`;
+  const res = await fetch(url);
+  if(!res.ok) throw new Error("weather fetch failed: "+res.status);
+  const data = await res.json();
+  const { icon, text } = weatherCodeToText(data.current.weathercode);
+  const hourly = buildHourlySlice(data.hourly, todayStr());
+  return { temp: data.current.temperature_2m, icon, text, fetchedAt: data.current.time, hourly };
+}
+
+function renderHourlyWeatherTable(hourly, rangeStart, rangeEnd){
+  let list = hourly || [];
+  if(rangeStart!=null && rangeEnd!=null){
+    list = list.filter(h=>{
+      const hr = parseInt(h.time.split(":")[0], 10);
+      return hr >= rangeStart && hr <= rangeEnd;
+    });
+  } else {
+    const nowHr = new Date().getHours();
+    let startIdx = list.findIndex(h=> parseInt(h.time.split(":")[0],10) >= nowHr);
+    if(startIdx === -1) startIdx = 0;
+    list = list.slice(startIdx, startIdx+12);
+  }
+  if(!list.length) return "";
+  const th = (label)=>`<th class="wh">${label}</th>`;
+  const cell = (content)=>`<td>${content}</td>`;
+  const rowTimes = list.map(h=>cell(`<b>${esc(h.time)}</b>`)).join("");
+  const rowIcons = list.map(h=>cell(`<span style="font-size:17px;">${h.icon}</span>`)).join("");
+  const rowTemp = list.map(h=>cell(h.temp!=null?`${Math.round(h.temp)}℃`:"-")).join("");
+  const rowPop = list.map(h=>cell(h.pop!=null?`<span style="color:#3D74A6;">${h.pop}%</span>`:"-")).join("");
+  const rowHumid = list.map(h=>cell(h.humidity!=null?`${h.humidity}%`:"-")).join("");
+  const rowPrecip = list.map(h=>cell(h.precip!=null?`${h.precip}mm`:"-")).join("");
+  const rowWind = list.map(h=>{
+    const arrow = h.windDir!=null ? `<span style="display:inline-block;transform:rotate(${h.windDir+180}deg);">↑</span>` : "";
+    return cell(`${arrow}${h.wind!=null?h.wind+"m/s":"-"}`);
+  }).join("");
+  return ` <div class="hw"> <table> <tbody> <tr>${th("時刻")}${rowTimes}</tr> <tr>${th("天気")}${rowIcons}</tr> <tr>${th("気温")}${rowTemp}</tr> <tr>${th("降水確率")}${rowPop}</tr> <tr>${th("湿度")}${rowHumid}</tr> <tr>${th("降水量")}${rowPrecip}</tr> <tr>${th("風")}${rowWind}</tr> </tbody> </table> </div> `;
+}
+
+function updateCheckTime(idx, slot, newTime){
+  const c = getCell(idx);
+  if(c[slot]){
+    c[slot].time = newTime;
+    persistChecks();
+    render();
+  }
+}
+function updateExtraTime(idx, extraIdx, newTime){
+  const c = getCell(idx);
+  if(c.extra && c.extra[extraIdx]){
+    c.extra[extraIdx].time = newTime;
+    persistChecks();
+    render();
+  }
+}
+
+async function refreshWeather(){
+  try{
+    const w = await fetchWeatherNow();
+    state.weather = w;
+    await persistWeather();
+    render();
+  }catch(e){
+    console.error("weather error", e);
+    showToast("天気の取得に失敗しました");
+  }
+}
+
+function setTextScale(v){
+  state.textScale = v;
+  render();
+}
+
+function switchTab(t){
+  state.tab = t;
+  render();
+  if(t==="report" && state.viewDate===todayStr() && !state.weather){
+    refreshWeather();
+  }
+}
+function switchSlot(s){ state.slot = s; render(); }
+
+function renderStaffOptions(){
+  return state.staffList.map(s=>`<option value="${esc(s)}" ${s===state.currentStaff?"selected":""}>${esc(s)}</option>`).join("");
+}
+
+function esc(s){
+  return String(s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
+const DONE_BG = "#2F6B3D";   // 済み: はっきりした濃い緑
+const SKIP_BG = "#E8E2CE";   // 不要: 明るいベージュ(黒文字で高コントラスト)
+
+function cellView(idx){
+  const c = getCell(idx);
+  const slot = state.slot;
+  const s = c[slot];
+  let cls = "cell";
+  let statusText = "未";
+  let bg = groupColor(idx);
+  if(s && s.done){ cls+=" done"; statusText = "✓ 済 "+s.staff+" "+s.time; bg = DONE_BG; }
+  else if(s && s.skip){ cls+=" skip"; statusText = "不要 "+s.staff; bg = SKIP_BG; }
+  const hasExtra = c.extra && c.extra.length>0;
+  if(hasExtra) cls += " ef";
+  return ` <div class="${cls}" style="background-color:${bg};" onclick="toggleSlotCheck(${idx})"> <div class="name">${esc(state.areas[idx])}</div> <div class="status">${statusText}</div> ${hasExtra?`<div class="eb" onclick="showExtraList(${idx}, event)">追加${c.extra.length}回${c.extra[c.extra.length-1].plant?"・"+esc(c.extra[c.extra.length-1].plant):""} ✎</div>`:""} <div style="display:flex;gap:4px;margin-top:2px;"> <button class="btn gh" style="font-size:10px;padding:3px 6px;" onclick="toggleSkip(${idx}, event)">${s&&s.skip?"取消":"不要"}</button> <button class="btn gh" style="font-size:10px;padding:3px 6px;" onclick="addExtra(${idx}, event)">+追加</button> </div> </div> `;
+}
+
+function renderWorklogTab(){
+  const entries = state.worklog || [];
+  const list = entries.length ? entries.map((e,i)=>` <div class="item"> <div style="flex:1;"> <div class="txt">${esc(e.text)}</div> <div class="db">${esc(e.staff)} ${esc(e.time)}</div> </div> <button class="btn gh" style="font-size:11px;padding:4px 8px;" onclick="removeWorklogEntry(${i})">×</button> </div> `).join("") : `<div class="sm">まだ記録がありません</div>`;
+
+  return ` <div class="st">水やり以外の作業を記録</div> <textarea class="instr" id="__worklogInput" placeholder="例:ガーデン草取り　1作業ずつ「記録する」を押して登録" style="min-height:64px;"></textarea> <div class="row"><button class="btn" onclick="addWorklogEntry()">記録する</button></div> <div class="st">今日の作業一覧</div> <div class="il">${list}</div> `;
+}
+
+function renderCheckTab(){
+  return ` <div class="slotbar"> <button class="sb am ${state.slot==='am'?'ac':''}" onclick="switchSlot('am')">午前</button> <button class="sb pm ${state.slot==='pm'?'ac':''}" onclick="switchSlot('pm')">午後</button> </div> <div class="grid ${state.textScale>=1.3?'gx':''}">${state.areas.map((_,i)=>cellView(i)).join("")}</div> <div class="hint">タップで水やり完了を記録。不要な場合は「不要」も選べます。乾いていたら「+追加」でいつでも記録できます。「追加◯回」の表示をタップすると、間違えた記録を削除できます。上部の日付を変えると、過去の記録の確認や翌日以降の指示の先入れができます。</div> `;
+}
+
+function renderInstrTab(){
+  const filtered = (state.workItems||[]).map((it,i)=>({it,i})).filter(({it})=> !it.done || it.doneDate===state.viewDate);
+  return ` <div class="st">本日のイベント</div> <input type="text" style="width:100%;" placeholder="例: 感謝祭セール、地域イベント出店 など" value="${esc(state.instructions.eventName||"")}" onblur="state.instructions.eventName=this.value; persistInstr();"> <div class="st">今日の指示</div> <textarea class="instr" placeholder="連絡事項やメモ…" onblur="state.instructions.text=this.value; persistInstr();">${esc(state.instructions.text||"")}</textarea> <div class="st">写真</div> <div class="pg"> ${(state.instructions.images||[]).map((src,i)=>` <div class="pt"> <img src="${src}" onclick="openLightbox('${src}')"> <button class="del" onclick="removeImage(${i})">×</button> </div> `).join("")} <label class="ap"> ＋写真を撮る/選ぶ <input type="file" accept="image/*" multiple onchange="handlePhotoInput(this)"> </label> </div> <div class="st">作業リスト</div> <div class="hint" style="margin-top:-6px;">チェックが入らなかった項目は、チェックが入るまで翌日以降も表示され続けます。</div> <div class="il"> ${filtered.map(({it,i})=>` <div class="item ${it.done?'done':''}"> <input type="checkbox" ${it.done?"checked":""} onchange="toggleInstrItem(${i})"> <div style="flex:1;"> <input type="text" style="width:100%;border:none;background:transparent;padding:2px 0;font-size:14px;" value="${esc(it.text)}" placeholder="項目を入力" oninput="updateInstrItemText(${i}, this.value)" onblur="commitInstrItemText(${i}, this.value)"> ${it.done?`<div class="db">完了: ${esc(it.doneBy||"")} ${esc(it.doneAt||"")}</div>`:""} </div> <button class="btn gh" style="font-size:11px;padding:4px 8px;" onclick="removeInstrItem(${i})">×</button> </div> `).join("")} </div> <div class="row"><button class="btn gh" onclick="addInstrItem()">＋ 項目を追加</button></div> `;
+}
+
+function pillFor(cell, slot){
+  const s = cell[slot];
+  const label = slot==="am" ? "午前" : "午後";
+  if(s && s.done) return `<span class="pill ok">${label}済 ${esc(s.staff)}</span>`;
+  if(s && s.skip) return `<span class="pill skip">${label}不要</span>`;
+  return `<span class="pill no">${label}未</span>`;
+}
+
+function switchAdminSort(v){ state.adminSort = v; render(); }
+
+function renderAdminTab(){
+  const staffOfArea = (i)=>{
+    const c = getCell(i);
+    return (c.am && c.am.staff) || (c.pm && c.pm.staff) || (c.extra && c.extra[0] && c.extra[0].staff) || "";
+  };
+  let order = state.areas.map((_,i)=>i);
+  if(state.adminSort==="area"){
+    order.sort((a,b)=> state.areas[a].localeCompare(state.areas[b], 'ja'));
+  } else if(state.adminSort==="staff"){
+    order.sort((a,b)=>{
+      const sa = staffOfArea(a), sb = staffOfArea(b);
+      if(!sa && !sb) return 0;
+      if(!sa) return 1;
+      if(!sb) return -1;
+      return sa.localeCompare(sb, 'ja');
+    });
+  }
+
+  const sortBar = ` <div class="slotbar np" style="margin-bottom:10px;"> <button class="sb ${state.adminSort==='area'?'ac am':''}" onclick="switchAdminSort('area')">エリア順</button> <button class="sb ${state.adminSort==='staff'?'ac am':''}" onclick="switchAdminSort('staff')">担当者順</button> </div> `;
+
+  const rows = order.map(i=>{
+    const name = state.areas[i];
+    const c = getCell(i);
+    const extra = c.extra && c.extra.length ? `<span class="pill extra" style="cursor:pointer;" onclick="showExtraList(${i}, event)">追加${c.extra.length}${c.extra.some(e=>e.plant)?"・"+esc(c.extra.filter(e=>e.plant).map(e=>e.plant).join("/")):""} ✎</span>` : "";
+    return `<div class="ar" style="border-left:5px solid ${groupColor(i)};"> <div class="an">${esc(name)}</div> ${pillFor(c,'am')} ${pillFor(c,'pm')} ${extra} </div>`;
+  }).join("");
+
+  const editBtn = state.editingAreas
+    ? `<button class="btn" onclick="finishEditAreas()">完了</button>`
+    : `<button class="btn gh" onclick="startEditAreas()">エリア名を編集</button>`;
+
+  const editBlock = state.editingAreas ? ` <div class="ea"> ${state.areas.map((name,i)=>`<input type="text" value="${esc(name)}" oninput="state.areas[${i}]=this.value">`).join("")} <div class="sm">編集後「完了」を押して保存してください</div> </div> ` : "";
+
+  const staffEditBtn = state.editingStaff
+    ? `<button class="btn" onclick="finishEditStaff()">完了</button>`
+    : `<button class="btn gh" onclick="startEditStaff()">担当者リストを編集</button>`;
+  const staffEditBlock = state.editingStaff ? ` <div class="ea"> ${state.staffList.map((name,i)=>`<input type="text" value="${esc(name)}" oninput="state.staffList[${i}]=this.value">`).join("")} <div class="row"> <button class="btn gh" onclick="state.staffList.push('');render();">＋ 追加</button> </div> </div> ` : "";
+
+  return ` <div class="st">水やり状況(全${state.areas.length}エリア)</div> ${sortBar} ${rows} <div class="st">水やり以外の作業ログ</div> ${(state.worklog&&state.worklog.length) ? state.worklog.map(e=>`<div class="rt">${esc(e.time)}　${esc(e.staff)}　${esc(e.text)}</div>`).join("") : `<div class="sm">記録なし</div>`} <div class="st">設定</div> <div class="row">${editBtn}</div> ${editBlock} <div class="row" style="margin-top:12px;">${staffEditBtn}</div> ${staffEditBlock} `;
+}
+
+function startEditAreas(){ state.editingAreas = true; render(); }
+function finishEditAreas(){ state.editingAreas = false; persistAreas(); render(); }
+function startEditStaff(){ state.editingStaff = true; render(); }
+function finishEditStaff(){
+  state.editingStaff = false;
+  state.staffList = state.staffList.map(s=>s.trim()).filter(s=>s.length>0);
+  persistStaff();
+  render();
+}
+
+function renderReportTab(){
+  const doneAm = state.areas.filter((_,i)=>{const c=getCell(i); return c.am && c.am.done;}).length;
+  const doneAllPm = state.areas.filter((_,i)=>{const c=getCell(i); return c.pm && (c.pm.done||c.pm.skip);}).length;
+  const totalExtra = state.areas.reduce((sum,_,i)=>sum + getCell(i).extra.length, 0);
+
+  const timeInput = (value, onchange)=>`<input type="time" class="te np" value="${esc(value||'')}" onchange="${onchange}"><span class="po">${esc(value||'')}</span>`;
+
+  const tableRows = state.areas.map((name,i)=>{
+    const c = getCell(i);
+    let am = "未";
+    if(c.am){
+      am = `${c.am.done?"済":"不要"}(${esc(c.am.staff)} ${timeInput(c.am.time, `updateCheckTime(${i},'am',this.value)`)})`;
+    }
+    let pm = "未";
+    if(c.pm){
+      pm = `${c.pm.done?"済":"不要"}(${esc(c.pm.staff)} ${timeInput(c.pm.time, `updateCheckTime(${i},'pm',this.value)`)})`;
+    }
+    const extra = c.extra.length ? c.extra.map((e,ei)=>`${esc(e.staff)} ${timeInput(e.time, `updateExtraTime(${i},${ei},this.value)`)}${e.plant?"("+esc(e.plant)+")":""}`).join(" / ") : "-";
+    return `<tr><td style="border-left:4px solid ${groupColor(i)};">${esc(name)}</td><td>${am}</td><td>${pm}</td><td>${extra}</td></tr>`;
+  }).join("");
+
+  const workItemsToShow = (state.workItems||[]).filter(it => !it.done || it.doneDate===state.viewDate);
+  const itemsHtml = workItemsToShow.length ? workItemsToShow.map(it=>`<div class="rt">${it.done?"☑":"☐"} ${esc(it.text)} ${it.done?`— 完了(${esc(it.doneBy||"")} ${esc(it.doneAt||"")})`:""}</div>`).join("")
+    : `<div class="sm">作業リストなし</div>`;
+
+  return ` <div class="row np" style="margin-bottom:12px;"> <button class="btn" onclick="window.print()">この画面を印刷</button> </div> <div id="report"> <h2>水やり作業日報</h2> <div class="rd">${dateLabel(state.viewDate)}　午前完了 ${doneAm}/${state.areas.length}　午後対応 ${doneAllPm}/${state.areas.length}　追加水やり ${totalExtra}件</div> <div style="font-size:13px;margin-bottom:12px;"> ${state.instructions.eventName ? `<div>📌 イベント: ${esc(state.instructions.eventName)}</div>` : ""} <div> ${state.weather ? `${state.weather.icon} ${esc(state.weather.text)}　気温 ${state.weather.temp}℃(筑前町・${esc((state.weather.fetchedAt||"").split("T")[1]||"")}時点)` : "天気情報なし"} ${state.viewDate===todayStr() ? `<button class="btn gh np" style="margin-left:8px;font-size:11px;padding:3px 8px;" onclick="refreshWeather()">🔄再取得</button>` : ""} </div> ${state.weather ? ` <div class="np">${renderHourlyWeatherTable(state.weather.hourly)}</div> <div class="pob">${renderHourlyWeatherTable(state.weather.hourly, 8, 18)}</div> ` : ""} </div> <table> <thead><tr><th>エリア</th><th>午前</th><th>午後</th><th>追加</th></tr></thead> <tbody>${tableRows}</tbody> </table> <div class="st" style="margin-top:18px;">店長からの指示</div> <div class="ri">${esc(state.instructions.text||"(指示なし)")}</div> ${(state.instructions.images&&state.instructions.images.length) ? ` <div class="pg"> ${state.instructions.images.map(src=>`<div class="pt"><img src="${src}" onclick="openLightbox('${src}')"></div>`).join("")} </div> ` : ""} <div class="st">作業リスト</div> ${itemsHtml} <div class="st" style="margin-top:18px;">水やり以外の作業</div> ${(state.worklog&&state.worklog.length) ? state.worklog.map(e=>`<div class="rt">${esc(e.time)}　${esc(e.staff)}　${esc(e.text)}</div>`).join("") : `<div class="sm">記録なし</div>`} </div> `;
+}
+
+function render(){
+  const app = document.getElementById("app");
+  if(!state.loaded){ app.innerHTML = '<div class="loading">読み込み中…</div>'; return; }
+  app.style.zoom = state.textScale || 1;
+
+  let body = "";
+  if(state.dayLoading){
+    body = '<div class="loading">この日の記録を読み込み中…</div>';
+  } else if(state.tab==="check") body = renderCheckTab();
+  else if(state.tab==="instr") body = renderInstrTab();
+  else if(state.tab==="worklog") body = renderWorklogTab();
+  else if(state.tab==="admin") body = renderAdminTab();
+  else if(state.tab==="report") body = renderReportTab();
+
+  const errorBanner = state.loadError ? ` <div style="background:var(--as);color:var(--a);border:1px solid var(--a);border-radius:8px;padding:8px 10px;font-size:12px;font-weight:700;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;gap:8px;"> <span>⚠ 一部データの読み込みに失敗しました。表示内容が最新でない可能性があります。</span> <button class="btn gh np" style="font-size:11px;padding:4px 8px;flex-shrink:0;" onclick="location.reload()">再読み込み</button> </div> ` : "";
+
+  app.innerHTML = ` ${errorBanner} <header class="top"> <span class="tag">水やり管理</span> <div class="subline"> <span>${dateLabel(state.viewDate)}</span> </div> <div class="slotbar np" style="margin-top:8px;"> <button class="sb ${state.textScale===1?'ac am':''}" onclick="setTextScale(1)">文字: 標準</button> <button class="sb ${state.textScale===1.15?'ac am':''}" onclick="setTextScale(1.15)">大</button> <button class="sb ${state.textScale===1.3?'ac am':''}" onclick="setTextScale(1.3)">特大</button> </div> <div class="staffbar np"> <select onchange="state.currentStaff=this.value"> <option value="">担当者を選択</option> ${renderStaffOptions()} </select> </div> <div class="staffbar np" style="margin-top:8px;"> <button class="btn gh" style="padding:8px 12px;" onclick="switchDate(shiftDate(state.viewDate,-1))">◀</button> <input type="date" value="${state.viewDate}" style="flex:1;" onchange="switchDate(this.value)"> <button class="btn gh" style="padding:8px 12px;" onclick="switchDate(shiftDate(state.viewDate,1))">▶</button> ${state.viewDate!==todayStr()?`<button class="btn gh" onclick="switchDate(todayStr())">今日</button>`:""} </div> </header> <nav class="tabs np"> <button class="${state.tab==='check'?'ac':''}" onclick="switchTab('check')">水やり記録</button> <button class="${state.tab==='instr'?'ac':''}" onclick="switchTab('instr')">作業指示</button> <button class="${state.tab==='worklog'?'ac':''}" onclick="switchTab('worklog')">作業ログ</button> <button class="${state.tab==='admin'?'ac':''}" onclick="switchTab('admin')">管理者ビュー</button> <button class="${state.tab==='report'?'ac':''}" onclick="switchTab('report')">日報</button> </nav> <main>${body}</main> `;
+}
+
+loadAll();
+</script>
+</body>
+</html>
