@@ -1,7 +1,7 @@
 // 水やり管理アプリ - データAPI(Apps Script)
 // 画面(HTML/CSS/JS)はGitHub Pagesに移し、このスクリプトは
 // Googleスプレッドシート(DB)とGoogleドライブ(写真置き場)への
-// 読み書きだけを行う「JSON API」として動かします。
+// 読み書きだけを行う「データAPI」として動かします。
 //
 // 使い方:
 //  1. このファイルの内容を、今まで通り Extensions > Apps Script の
@@ -9,54 +9,82 @@
 //     もう使わないので、内容を空にするか削除してOK)。
 //  2. 「デプロイを管理」→ 鉛筆アイコン→ バージョン:「新バージョン」→ デプロイ。
 //     (URLはこれまでと同じものを使い続けられます)
-//  3. そのURLを GitHub Pages 側の index.html 内、API_URL に設定する。
+//
+// 【重要】Apps Scriptのウェブアプリは、別サイト(GitHub Pages)からの
+// 読み書きを許可する印(CORSヘッダー)を技術的に返せません。そのため
+// GitHub Pages側は fetch() ではなく、「隠しフォームでこのURLに
+// GET/POSTし、ここが返すHTMLページの中の<script>から
+// postMessageで結果を送り返す」という方式で通信しています。
+// なので、ここのdoGet/doPostは "JSONそのもの" ではなく、
+// postMessageするだけの小さなHTMLページを返します。
 
 const KV_SHEET_NAME = 'KV';
 const IMAGE_FOLDER_NAME = '水やり管理_写真';
 
 // ==== エントリーポイント ====
 
-// 読み取り: GET {URL}?action=get&key=xxxx
+// 読み取り: 隠しフォームからの GET (action=get, key=xxxx, requestId=xxxx)
 function doGet(e) {
+  const requestId = e.parameter.requestId || '';
   try {
     const action = e.parameter.action;
     if (action === 'get') {
       const value = getValue(e.parameter.key);
-      return jsonOut_({ ok: true, value: value });
+      return bridgeOut_({ ok: true, value: value, requestId: requestId });
+    }
+    if (action === 'getMulti') {
+      // 起動時など、複数のキーを一度にまとめて読み込むための一括取得。
+      // 1件ずつ同時に何本も通信すると、隠しiframeの通信同士が
+      // ぶつかってタイムアウトしやすくなるため、1回の通信で
+      // まとめて返せるようにしている。
+      const keys = (e.parameter.keys || '').split(',').filter(function(k){ return k; });
+      const values = {};
+      keys.forEach(function(k){ values[k] = getValue(k); });
+      return bridgeOut_({ ok: true, values: values, requestId: requestId });
     }
     if (action === 'ping') {
-      return jsonOut_({ ok: true, pong: true });
+      return bridgeOut_({ ok: true, pong: true, requestId: requestId });
     }
-    return jsonOut_({ ok: false, error: 'unknown action: ' + action });
+    return bridgeOut_({ ok: false, error: 'unknown action: ' + action, requestId: requestId });
   } catch (err) {
-    return jsonOut_({ ok: false, error: String(err) });
+    return bridgeOut_({ ok: false, error: String(err), requestId: requestId });
   }
 }
 
-// 書き込み・画像アップロード: POST {URL}  (body: JSONテキスト, Content-Type: text/plain)
-// body例: {"action":"set","key":"...","value":"..."}
-//        {"action":"uploadImage","dataUrl":"...","filename":"..."}
+// 書き込み・画像アップロード: 隠しフォームからの POST
+// (action=set, key, value, requestId)
+// (action=uploadImage, dataUrl, filename, requestId)
 function doPost(e) {
+  const requestId = (e.parameter && e.parameter.requestId) || '';
   try {
-    const body = JSON.parse(e.postData.contents);
-    const action = body.action;
+    const action = e.parameter.action;
     if (action === 'set') {
-      setValue(body.key, body.value);
-      return jsonOut_({ ok: true });
+      setValue(e.parameter.key, e.parameter.value);
+      return bridgeOut_({ ok: true, requestId: requestId });
     }
     if (action === 'uploadImage') {
-      const url = uploadImage(body.dataUrl, body.filename);
-      return jsonOut_({ ok: true, url: url });
+      const url = uploadImage(e.parameter.dataUrl, e.parameter.filename);
+      return bridgeOut_({ ok: true, url: url, requestId: requestId });
     }
-    return jsonOut_({ ok: false, error: 'unknown action: ' + action });
+    return bridgeOut_({ ok: false, error: 'unknown action: ' + action, requestId: requestId });
   } catch (err) {
-    return jsonOut_({ ok: false, error: String(err) });
+    return bridgeOut_({ ok: false, error: String(err), requestId: requestId });
   }
 }
 
-function jsonOut_(obj) {
-  return ContentService.createTextOutput(JSON.stringify(obj))
-    .setMimeType(ContentService.MimeType.JSON);
+/**
+ * postMessageで結果を親ウィンドウ(GitHub Pages側)に送り返すだけの
+ * 小さなHTMLページを作る。ALLOWALLにしておかないと、他サイトの
+ * iframeの中に表示すること自体をApps Script側に拒否されてしまう。
+ */
+function bridgeOut_(obj) {
+  const json = JSON.stringify(obj).replace(/</g, '\\u003c');
+  // Apps Scriptはこのページ自体をさらに内側のiframe(googleusercontent.com)
+  // に入れ子で読み込むため、parent(1つ上の階層)ではなくtop(一番外側=
+  // GitHub Pagesのページ本体)宛てにpostMessageする必要がある
+  const html = '<script>top.postMessage(Object.assign({__gasBridge:true}, ' + json + '), "*");</script>';
+  return HtmlService.createHtmlOutput(html)
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
 // ==== KV(キー・バリュー)シート ====
