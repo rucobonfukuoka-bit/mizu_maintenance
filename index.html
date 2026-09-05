@@ -278,63 +278,80 @@
 <div id="app"><div class="loading">読み込み中…</div></div>
 
 <script>
-// ==== データAPI連携: window.storage をApps Script製JSON API経由に差し替え ====
+// ==== データAPI連携: window.storage をApps Script製API経由に差し替え ====
 // このURLは、Apps Scriptエディタの「デプロイを管理」に表示される
 // ウェブアプリのURL(.../exec)をそのまま入れてください。
 const API_URL = 'https://script.google.com/macros/s/AKfycbwPJVUETIr-i5766asjRKvkUB61-CurW7xIE3bQQ6_RafVgbtUaCHhmEybMdbLnsbYN/exec';
 
 const RPC_TIMEOUT_MS = 15000; // 15秒応答がなければタイムアウトさせる
 
-function withTimeout_(promise, label){
+// Apps Scriptのウェブアプリは、別サイト(GitHub Pages)からの読み書きを
+// 許可する印(CORSヘッダー)を技術的に返せない。そのため fetch() では
+// 通信できず、代わりに「隠しフォームでPOST/GETし、Apps Script側が
+// 返すページの中の<script>からpostMessageで結果を送り返す」という
+// 昔からある回避策を使っている。
+let __bridgeFrame = null;
+let __bridgeSeq = 0;
+const __bridgePending = {};
+
+function getBridgeFrame_(){
+  if(__bridgeFrame && document.body.contains(__bridgeFrame)) return __bridgeFrame;
+  const iframe = document.createElement('iframe');
+  iframe.name = 'gasBridgeFrame';
+  iframe.style.display = 'none';
+  document.body.appendChild(iframe);
+  __bridgeFrame = iframe;
+  return iframe;
+}
+
+window.addEventListener('message', (ev)=>{
+  const data = ev.data;
+  if(!data || typeof data !== 'object' || !data.__gasBridge || !data.requestId) return;
+  const pending = __bridgePending[data.requestId];
+  if(!pending) return;
+  delete __bridgePending[data.requestId];
+  clearTimeout(pending.timer);
+  if(data.ok) pending.resolve(data);
+  else pending.reject(new Error(data.error || 'API error'));
+});
+
+function callBridge_(method, action, params, label){
   return new Promise((resolve, reject)=>{
-    let settled = false;
+    const requestId = 'r' + (++__bridgeSeq) + '_' + Date.now();
     const timer = setTimeout(()=>{
-      if(settled) return;
-      settled = true;
+      delete __bridgePending[requestId];
       reject(new Error('TIMEOUT: ' + label + ' がサーバーから' + (RPC_TIMEOUT_MS/1000) + '秒応答しませんでした'));
     }, RPC_TIMEOUT_MS);
-    promise.then((v)=>{
-      if(settled) return;
-      settled = true;
-      clearTimeout(timer);
-      resolve(v);
-    }).catch((err)=>{
-      if(settled) return;
-      settled = true;
-      clearTimeout(timer);
-      reject(err);
-    });
-  });
-}
+    __bridgePending[requestId] = { resolve, reject, timer };
 
-async function apiGet_(key){
-  const url = API_URL + '?action=get&key=' + encodeURIComponent(key);
-  const res = await fetch(url);
-  const data = await res.json();
-  if(!data.ok) throw new Error(data.error || 'API error (get)');
-  return data.value;
-}
+    const iframe = getBridgeFrame_();
+    const form = document.createElement('form');
+    form.method = method;
+    form.action = API_URL;
+    form.target = iframe.name;
+    form.style.display = 'none';
 
-async function apiPost_(body){
-  // Content-Type を text/plain にすることで、Apps Script側で対応していない
-  // プリフライト(OPTIONS)リクエストの発生を避けている
-  const res = await fetch(API_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify(body)
+    const fields = Object.assign({ action, requestId }, params);
+    for(const k in fields){
+      const input = document.createElement('input');
+      input.name = k;
+      input.value = fields[k] === undefined || fields[k] === null ? '' : String(fields[k]);
+      form.appendChild(input);
+    }
+    document.body.appendChild(form);
+    form.submit();
+    setTimeout(()=>form.remove(), 0);
   });
-  const data = await res.json();
-  if(!data.ok) throw new Error(data.error || 'API error (post)');
-  return data;
 }
 
 window.storage = {
   get: async (key)=>{
-    const value = await withTimeout_(apiGet_(key), 'getValue');
+    const res = await callBridge_('GET', 'get', { key }, 'getValue');
+    const value = res.value;
     return (value !== null && value !== undefined && value !== '') ? {key, value} : null;
   },
   set: async (key, value)=>{
-    await withTimeout_(apiPost_({ action:'set', key, value }), 'setValue');
+    await callBridge_('POST', 'set', { key, value }, 'setValue');
     return {key, value};
   }
 };
@@ -666,7 +683,7 @@ async function handlePhotoInput(inputEl){
   for(const file of files){
     try{
       const dataUrl = await resizeImageFile(file);
-      const url = (await withTimeout_(apiPost_({ action:'uploadImage', dataUrl, filename: file.name || 'photo.jpg' }), 'uploadImage')).url;
+      const url = (await callBridge_('POST', 'uploadImage', { dataUrl, filename: file.name || 'photo.jpg' }, 'uploadImage')).url;
       state.instructions.images.push(url);
     }catch(e){ console.error("画像の処理に失敗", e); showToast("写真のアップロードに失敗しました"); }
   }
