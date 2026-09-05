@@ -290,18 +290,27 @@ const RPC_TIMEOUT_MS = 15000; // 15秒応答がなければタイムアウトさ
 // 通信できず、代わりに「隠しフォームでPOST/GETし、Apps Script側が
 // 返すページの中の<script>からpostMessageで結果を送り返す」という
 // 昔からある回避策を使っている。
-let __bridgeFrame = null;
 let __bridgeSeq = 0;
 const __bridgePending = {};
 
-function getBridgeFrame_(){
-  if(__bridgeFrame && document.body.contains(__bridgeFrame)) return __bridgeFrame;
+// 通信ごとに専用のiframeを新しく作る。1つのiframeを使い回すと、
+// 複数の通信が同時に走ったとき(例: 起動時に何個ものデータを
+// 並行して読み込む場合)、後から送った通信が前の通信のiframeの
+// ページ遷移を横取りしてしまい、前の通信がいつまでも応答を
+// 受け取れずタイムアウトしてしまう不具合があったため、この形にした。
+function createBridgeFrame_(requestId){
   const iframe = document.createElement('iframe');
-  iframe.name = 'gasBridgeFrame';
+  iframe.name = 'gasBridgeFrame_' + requestId;
   iframe.style.display = 'none';
   document.body.appendChild(iframe);
-  __bridgeFrame = iframe;
   return iframe;
+}
+
+function removeBridgeFrame_(requestId){
+  const pending = __bridgePending[requestId];
+  if(pending && pending.iframe && pending.iframe.parentNode){
+    pending.iframe.parentNode.removeChild(pending.iframe);
+  }
 }
 
 window.addEventListener('message', (ev)=>{
@@ -311,6 +320,7 @@ window.addEventListener('message', (ev)=>{
   if(!pending) return;
   delete __bridgePending[data.requestId];
   clearTimeout(pending.timer);
+  removeBridgeFrame_(data.requestId);
   if(data.ok) pending.resolve(data);
   else pending.reject(new Error(data.error || 'API error'));
 });
@@ -318,13 +328,14 @@ window.addEventListener('message', (ev)=>{
 function callBridge_(method, action, params, label){
   return new Promise((resolve, reject)=>{
     const requestId = 'r' + (++__bridgeSeq) + '_' + Date.now();
+    const iframe = createBridgeFrame_(requestId);
     const timer = setTimeout(()=>{
       delete __bridgePending[requestId];
+      if(iframe.parentNode) iframe.parentNode.removeChild(iframe);
       reject(new Error('TIMEOUT: ' + label + ' がサーバーから' + (RPC_TIMEOUT_MS/1000) + '秒応答しませんでした'));
     }, RPC_TIMEOUT_MS);
-    __bridgePending[requestId] = { resolve, reject, timer };
+    __bridgePending[requestId] = { resolve, reject, timer, iframe };
 
-    const iframe = getBridgeFrame_();
     const form = document.createElement('form');
     form.method = method;
     form.action = API_URL;
