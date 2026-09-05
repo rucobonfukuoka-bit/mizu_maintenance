@@ -237,7 +237,9 @@
   /* エリア列: 一番長いエリア名にちょうど収まる幅まで縮めて左寄せにし、
      浮いた分の横幅を「追加」列(長くなりがちな担当者・時刻・植物名)に回す */
   #report th:nth-child(1),#report td:nth-child(1){text-align:left;white-space:nowrap;width:1%;}
-  #report th:nth-child(4),#report td:nth-child(4){width:auto;}
+  #report th:nth-child(2),#report td:nth-child(2),
+  #report th:nth-child(3),#report td:nth-child(3){white-space:nowrap;width:1%;}
+  #report th:nth-child(4),#report td:nth-child(4){width:auto;white-space:normal;}
   #report .ri{margin-top:16px;font-size:13px;white-space:pre-wrap;line-height:1.6;}
   .rt{font-size:13px;padding:4px 0;border-bottom:1px dashed var(--ln);}
 
