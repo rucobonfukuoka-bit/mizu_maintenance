@@ -231,9 +231,13 @@
   #report{background:var(--pr);border:1px solid var(--ln);border-radius:10px;padding:16px;}
   #report h2{font-size:16px;margin:0 0 2px;}
   #report .rd{font-size:12px;color:var(--is);margin-bottom:14px;}
-  #report table{width:100%;border-collapse:collapse;font-size:12px;}
+  #report table{width:100%;border-collapse:collapse;font-size:12px;table-layout:auto;}
   #report th,#report td{border:1px solid var(--ln);padding:5px 4px;text-align:center;}
   #report th{background:var(--p);font-weight:700;}
+  /* エリア列: 一番長いエリア名にちょうど収まる幅まで縮めて左寄せにし、
+     浮いた分の横幅を「追加」列(長くなりがちな担当者・時刻・植物名)に回す */
+  #report th:nth-child(1),#report td:nth-child(1){text-align:left;white-space:nowrap;width:1%;}
+  #report th:nth-child(4),#report td:nth-child(4){width:auto;}
   #report .ri{margin-top:16px;font-size:13px;white-space:pre-wrap;line-height:1.6;}
   .rt{font-size:13px;padding:4px 0;border-bottom:1px dashed var(--ln);}
 
@@ -253,6 +257,13 @@
     #report{border:none;padding:0;}
     .po{display:inline;}
     .pob{display:block;}
+    /* 印刷時の天気予報(8-18時)は、用紙の幅にきれいに収まるように
+       表全体を固定幅・均等割りにして、はみ出さないようにする */
+    .pob .hw{overflow-x:visible;margin-top:6px;}
+    .pob .hw table{width:100%;table-layout:fixed;border-collapse:collapse;font-size:9px;}
+    .pob .hw td, .pob .hw th{border:1px solid var(--ln);padding:3px 1px;white-space:normal;word-break:break-word;line-height:1.3;}
+    .pob .hw th.wh{position:static;width:13%;text-align:left;font-size:9px;}
+    .pob .hw td span{font-size:11px !important;}
   }
 
   .loading{padding:40px 0;text-align:center;color:var(--is);font-size:13px;}
@@ -1028,7 +1039,7 @@ function renderReportTab(){
   const itemsHtml = workItemsToShow.length ? workItemsToShow.map(it=>`<div class="rt">${it.done?"☑":"☐"} ${esc(it.text)} ${it.done?`— 完了(${esc(it.doneBy||"")} ${esc(it.doneAt||"")})`:""}</div>`).join("")
     : `<div class="sm">作業リストなし</div>`;
 
-  return ` <div class="row np" style="margin-bottom:12px;"> <button class="btn" onclick="window.print()">この画面を印刷</button> </div> <div id="report"> <h2>水やり作業日報</h2> <div class="rd">${dateLabel(state.viewDate)}　午前完了 ${doneAm}/${state.areas.length}　午後対応 ${doneAllPm}/${state.areas.length}　追加水やり ${totalExtra}件</div> <div style="font-size:13px;margin-bottom:12px;"> ${state.instructions.eventName ? `<div>📌 イベント: ${esc(state.instructions.eventName)}</div>` : ""} <div> ${state.weather ? `${state.weather.icon} ${esc(state.weather.text)}　気温 ${state.weather.temp}℃(筑前町・${esc((state.weather.fetchedAt||"").split("T")[1]||"")}時点)` : "天気情報なし"} ${state.viewDate===todayStr() ? `<button class="btn gh np" style="margin-left:8px;font-size:11px;padding:3px 8px;" onclick="refreshWeather()">🔄再取得</button>` : ""} </div> ${state.weather ? ` <div class="np">${renderHourlyWeatherTable(state.weather.hourly)}</div> <div class="pob">${renderHourlyWeatherTable(state.weather.hourly, 8, 18)}</div> ` : ""} </div> <table> <thead><tr><th>エリア</th><th>午前</th><th>午後</th><th>追加</th></tr></thead> <tbody>${tableRows}</tbody> </table> <div class="st" style="margin-top:18px;">店長からの指示</div> <div class="ri">${esc(state.instructions.text||"(指示なし)")}</div> ${(state.instructions.images&&state.instructions.images.length) ? ` <div class="pg"> ${state.instructions.images.map(src=>`<div class="pt"><img src="${src}" onclick="openLightbox('${src}')"></div>`).join("")} </div> ` : ""} <div class="st">作業リスト</div> ${itemsHtml} <div class="st" style="margin-top:18px;">水やり以外の作業</div> ${(state.worklog&&state.worklog.length) ? state.worklog.map(e=>`<div class="rt">${esc(e.time)}　${esc(e.staff)}　${esc(e.text)}</div>`).join("") : `<div class="sm">記録なし</div>`} </div> `;
+  return ` <div class="row np" style="margin-bottom:12px;"> <button class="btn" onclick="window.print()">この画面を印刷</button> </div> <div id="report"> <h2>水やり作業日報</h2> <div class="rd">${dateLabel(state.viewDate)}　午前完了 ${doneAm}/${state.areas.length}　午後対応 ${doneAllPm}/${state.areas.length}　追加水やり ${totalExtra}件</div> <div style="font-size:13px;margin-bottom:12px;"> ${state.instructions.eventName ? `<div>📌 イベント: ${esc(state.instructions.eventName)}</div>` : ""} <div class="np"> ${state.weather ? `${state.weather.icon} ${esc(state.weather.text)}　気温 ${state.weather.temp}℃(筑前町・${esc((state.weather.fetchedAt||"").split("T")[1]||"")}時点)` : "天気情報なし"} ${state.viewDate===todayStr() ? `<button class="btn gh np" style="margin-left:8px;font-size:11px;padding:3px 8px;" onclick="refreshWeather()">🔄再取得</button>` : ""} </div> ${state.weather ? ` <div class="np">${renderHourlyWeatherTable(state.weather.hourly)}</div> <div class="pob">${renderHourlyWeatherTable(state.weather.hourly, 8, 18)}</div> ` : ""} </div> <table> <thead><tr><th>エリア</th><th>午前</th><th>午後</th><th>追加</th></tr></thead> <tbody>${tableRows}</tbody> </table> <div class="st" style="margin-top:18px;">店長からの指示</div> <div class="ri">${esc(state.instructions.text||"(指示なし)")}</div> ${(state.instructions.images&&state.instructions.images.length) ? ` <div class="pg"> ${state.instructions.images.map(src=>`<div class="pt"><img src="${src}" onclick="openLightbox('${src}')"></div>`).join("")} </div> ` : ""} <div class="st">作業リスト</div> ${itemsHtml} <div class="st" style="margin-top:18px;">水やり以外の作業</div> ${(state.worklog&&state.worklog.length) ? state.worklog.map(e=>`<div class="rt">${esc(e.time)}　${esc(e.staff)}　${esc(e.text)}</div>`).join("") : `<div class="sm">記録なし</div>`} </div> `;
 }
 
 function render(){
