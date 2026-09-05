@@ -364,6 +364,12 @@ window.storage = {
   set: async (key, value)=>{
     await callBridge_('POST', 'set', { key, value }, 'setValue');
     return {key, value};
+  },
+  // 複数キーを1回の通信でまとめて取得する(起動時のデータ読み込みなど、
+  // 何個ものキーを同時に読みたい場合はこちらを使う)
+  getMulti: async (keys)=>{
+    const res = await callBridge_('GET', 'getMulti', { keys: keys.join(',') }, 'getMulti');
+    return res.values || {};
   }
 };
 
@@ -463,6 +469,25 @@ async function safeGet(key, shared){
     return null;
   }
 }
+
+// 複数キーをまとめて安全に取得する(失敗時は全キーnullを返す)
+async function safeGetMulti(keys){
+  try{
+    const values = await window.storage.getMulti(keys);
+    const out = {};
+    keys.forEach(k=>{
+      const v = values[k];
+      out[k] = (v !== null && v !== undefined && v !== '') ? v : null;
+    });
+    return out;
+  }catch(e){
+    console.error('読み込み失敗(一括):', keys.join(','), e);
+    state.loadError = true;
+    const out = {};
+    keys.forEach(k=>{ out[k] = null; });
+    return out;
+  }
+}
 async function safeSet(key, value, shared){
   for(let attempt=1; attempt<=2; attempt++){
     try{
@@ -486,14 +511,10 @@ function safeParse(str, fallback){
 }
 
 async function loadAll(){
-  const [areas, staff, workItems] = await Promise.all([
-    safeGet("config:areas", true),
-    safeGet("config:staff", true),
-    safeGet("worklist:items", true)
-  ]);
-  state.areas = safeParse(areas, state.areas);
-  state.staffList = safeParse(staff, state.staffList);
-  state.workItems = safeParse(workItems, []);
+  const v = await safeGetMulti(["config:areas", "config:staff", "worklist:items"]);
+  state.areas = safeParse(v["config:areas"], state.areas);
+  state.staffList = safeParse(v["config:staff"], state.staffList);
+  state.workItems = safeParse(v["worklist:items"], []);
   if(mergeNewDefaultAreas()) await persistAreas();
   if(state.workItems.length===0) await migrateLegacyWorkItems();
   await loadDayData();
@@ -519,18 +540,14 @@ async function migrateLegacyWorkItems(){
 }
 
 async function loadDayData(){
-  const [checks, instr, worklog, weather] = await Promise.all([
-    safeGet("day:"+state.viewDate+":checks", true),
-    safeGet("day:"+state.viewDate+":instructions", true),
-    safeGet("day:"+state.viewDate+":worklog", true),
-    safeGet("day:"+state.viewDate+":weather", true)
-  ]);
-  state.checks = safeParse(checks, {});
-  state.instructions = safeParse(instr, { text:"", images:[], eventName:"" });
+  const dateKeys = ["checks","instructions","worklog","weather"].map(k=>"day:"+state.viewDate+":"+k);
+  const v = await safeGetMulti(dateKeys);
+  state.checks = safeParse(v["day:"+state.viewDate+":checks"], {});
+  state.instructions = safeParse(v["day:"+state.viewDate+":instructions"], { text:"", images:[], eventName:"" });
   if(!state.instructions.images) state.instructions.images = [];
   if(state.instructions.eventName===undefined) state.instructions.eventName = "";
-  state.worklog = safeParse(worklog, []);
-  state.weather = safeParse(weather, null);
+  state.worklog = safeParse(v["day:"+state.viewDate+":worklog"], []);
+  state.weather = safeParse(v["day:"+state.viewDate+":weather"], null);
   state.loaded = true;
   render();
   if(state.tab==="report" && state.viewDate===todayStr() && !state.weather){
